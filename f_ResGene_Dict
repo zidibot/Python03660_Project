@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+
+def f_ResGeneDict(ResFile):
+    """ Create a dictionary of all resistace genes and their sequences"""
+    
+    ### Need a TRY statement
+    
+    # Kmer creation from Resistance Genes file
+    ResFile = open("resistance_genes.fsa", "r")
+    ###
+    
+    # Read Line by line
+        # When ">" , assemble the sequence
+    info = [] # info line
+    seq = [] # original sequences
+    ResGene_Dict = {}
+    data = ''    
+    for line in ResFile:
+            if line.startswith('>'):
+                if data:   # have collected a sequence, push to seqs
+                    seq.append(data)
+                    ResGene_Dict[info] = data
+                    data = ''
+                info = line[:-1]   # Trim '>' from beginning
+                #ResGene_Dict[info]
+            else:
+                data += line.strip()
+        # there will be yet one more to push when we run out
+    seq.append(data)
+    ResGene_Dict[info] = data
+    
+    #return ResGene_Dict
