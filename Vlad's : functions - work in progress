@@ -1,0 +1,157 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Apr 15 15:49:36 2019
+
+@author: gvladja
+"""
+
+    
+### New suggestions
+
+# loop over the Resistance dictionary 
+    # Use the sequence kmer as a key to cross reference the reads dictionary (already subselected for reads depth)
+    #(or create a new dictionary that would contain kmers of Ref sequence insted of positions)
+        # check if the keys match one by one
+        # break if not found to move on to the next gene ( or continue to get number of coverage by assigning the counts)
+        
+# Alternatively ... could create sets of Reference genes and their kmers and use the kmer as a set ... 
+        # there should be a function to check one against the other if it is faster 
+
+# FOLLOWING FUNCTIONS were used as follows: 
+###from functions import *
+
+infile_read = "file1.txt.gz" # ___ from this point...
+infile_res = "resistance_genes.fsa"    # ___
+Res_Dict = f_ResGeneDict(infile_res) #___ instant
+Reads_list = f_gzip_extract_reads(infile_read)  #___ about a minute
+Reads_subset = f_Kmer_depth(Reads_list,30) # ____up to this point it takes about 8 min
+Count_Dict = f_append_pos(Res_Dict, Reads_subset) # too slow
+
+def f_kmer_generator(sequence, kmer_length):
+    '''k-mer generator using list'''
+    kmer_list = list()
+    for i in range(0, len(sequence), 1):
+        if (i < len(sequence)-kmer_length+1):
+            kmer_list.append(sequence[i:i+kmer_length])
+    return(kmer_list)
+    
+def f_gzip_extract_reads(filename):
+    """ Opening a gzip file and extracting the reads"""
+    print("Current function f_gzip_extract_reads")
+    
+    import gzip # import gzip to decompress .gz files
+    reads_list = []
+    line_count = 2
+    with gzip.open(filename, 'rt') as f:
+            for line in f:
+        
+                line_count += 1        
+                if line_count % 4 == 0: # prints every 4th line (sequence line)
+                
+                    read_seq = line.rstrip()
+                    reads_list.append(read_seq)
+                    
+                if line_count % 1000000 == 0:
+                    print("Current line being read: ",line_count)
+    
+    f.close()
+    print("f_gzip_extract_reads: complete!")
+    return reads_list
+
+def f_ResGeneDict(infile):
+    """ Create a dictionary of all resistace genes (keys) and their sequences (values,
+    and a nested dictionary of positions (keys) and counts (as values)"""
+    print("Current function f_ResGeneDict")
+    ### Needs a TRY statement_________________________________________________
+    
+    # Kmer creation from Resistance Genes file
+    ResFile = open(infile, "r")
+    ### _____________________________________________________________________
+    
+    # Read Line by line
+    # When ">" , assemble the sequence
+    info = [] # info line
+    seq = [] # original sequences
+    ResGene_Dict = {}
+    data = ''    
+    for line in ResFile:
+        if line.startswith('>'):
+            if data:   # have collected a sequence, push to seqs
+                seq.append(data)
+                ResGene_Dict[info] = {}
+                ResGene_Dict[info][data]= {}
+                for i in range(len(data)):
+                    ResGene_Dict[info][data][i]=0
+                data = ''
+            info = line[:-1]   # Trim '>' from beginning
+            #ResGene_Dict[info]
+        else:
+            data += line.strip()
+    # there will be yet one more to push when we run out
+    seq.append(data)
+    ResGene_Dict[info] = data
+    print("f_ResGeneDict: complete!")
+    return ResGene_Dict
+
+def f_Kmer_depth(Reads_list,min_depth):
+    """ Create all kmers from reads and subselect 
+    for the depth(aka number of occurance"""
+    print("Curent function f_Kmer_depth")
+    test_counter=0    
+    Kmer_Dict = dict()
+    for read in Reads_list:
+        test_counter +=1
+        kmer_list = f_kmer_generator(read,19)
+        for kmer in kmer_list:
+            if kmer in Kmer_Dict:
+                Kmer_Dict[kmer] += 1
+            else:
+                Kmer_Dict[kmer] = 1
+        if test_counter%100000 ==0:
+            print("f_Kmer_depth, counter state: ", test_counter )
+
+    # Reduse to the min 30 depth
+    Reads_subset = {key:val for key, val in Kmer_Dict.items() if val > min_depth}
+    Kmer_Dict.clear()
+    Kmer_Dict.clear()
+    print("Done") # 6min:47sec
+    return Reads_subset
+    
+def f_reads_subset(Res_Dict,reads_list): # too slow
+    """ Matching the reads to the Res_Dict """
+    print("Current function: f_reads_subset")
+    print("Initialised")
+    test_counter = 0
+    reads_subset = []
+    for read in reads_list:
+        test_counter += 1
+        read_srt = read[-19:]
+        read_end = read[:19]
+        for key in Res_Dict:
+            for val in Res_Dict[key]:
+                if val.find(read_srt) > -1 or val.find(read_end) > -1:
+                    #append
+                    reads_subset.append(read)
+                    break
+        if test_counter % 100 ==0:
+            print("f_reads_subset counter state: ", test_counter)
+    return reads_subset                
+        
+
+def f_append_pos(Res_Dict, Reads_list_filtered): # too slow? is it the touple ? try something else
+    """ Iterate over all reads and append the possitions to the Resistance Dictionary"""
+    test_counter = 0
+    for i in Res_Dict:
+        for j in Res_Dict[i]:
+            test_counter +=1
+            for read in [x[0] for x in Reads_list_filtered]: # lets try filtered
+                pos = j.find(read)
+                if pos > -1:
+                    if pos in Res_Dict[i][j]:
+                        Res_Dict[i][j][pos] = +1
+                    else:
+                        Res_Dict[i][j][pos] = 1 
+                        
+            if test_counter % 10 == 0:
+                print("f_append_pos, current count: ", test_counter)
+    return Res_Dict
