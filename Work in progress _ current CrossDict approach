@@ -1,46 +1,20 @@
-from functions import *
-
-### my files  - VLad
-infile_read = "file1.txt.gz"
-infile_res = "resistance_genes.fsa" 
-   
-
-# Read the sample file
-Reads_list = f_gzip_extract_reads(infile_read)
-
-# Read the resistance reference genes
-Res_Dict = f_ResGeneDict_Kmers(infile_res)
-
-# Create all kemers ( only forward are considered) and subset them for a depth
-Reads_subset = f_Kmer_depth(Reads_list,depth_int)
-
-# Cross checks both dictionaries for the presense of the KMERS in both
-# atm outputs a separate list of ID's which gene kmers were found at least once
-results = f_Dict_crosscheck(newRes_Dict, Reads_subset)
-
-
+import gzip 
 
 def f_gzip_extract_reads(filename):
     """ Opening a gzip file and extracting the reads"""
     print("Current function f_gzip_extract_reads")
-    
-    import gzip # import gzip to decompress .gz files
     reads_list = []
     line_count = 2
     with gzip.open(filename, 'rt') as f:
             for line in f:
-        
                 line_count += 1        
-                if line_count % 4 == 0: # prints every 4th line (sequence line)
-                
+                if line_count % 4 == 0:                                         # grab the sequence line
                     read_seq = line.rstrip()
                     reads_list.append(read_seq)
-                    
-                if line_count % 1000000 == 0:
+                if line_count % 1000000 == 0:                                   # Counter
                     print("Current line being read: ",line_count)
-    
     f.close()
-    print("f_gzip_extract_reads: complete!")
+    print("f_gzip_extract_reads of %s is complete!"  %filename)
     return reads_list
 
 def f_ResGeneDict_Kmers(infile):
@@ -53,44 +27,86 @@ def f_ResGeneDict_Kmers(infile):
     ResFile = open(infile, "r")
     ### _____________________________________________________________________
     
-    # Read Line by line
-    # When ">" , assemble the sequence
     info = [] # info line
     ResGene_Dict = {}
     data = ''    
-    for line in ResFile:
-        if line.startswith('>'):
-            if data:   # have collected a sequence, push to seqs
+    for line in ResFile:                                                        # When ">" , assemble the sequence
+        if line.startswith('>'):                                                # Read Line by line
+            if data:   # push to seqs
                 ResGene_Dict[info] = {}
                 ResGene_Dict[info][data]= {}
                 for i in f_kmer_generator(data, 19):
                     ResGene_Dict[info][data][i]=0
-                    if info == ">dfrD_1_Z50141 Trimethoprim resistance:":
-                        print("Here")
-                        break
                 data = ''
-            info = line[:-1]   # Trim '>' from beginning
-            #ResGene_Dict[info]
+            info = line[:-1]           
         else:
-            data += line.strip()
-    # there will be yet one more to push when we run out
-    ResGene_Dict[info] = {}
+            data += line.strip()                                                                                     
+    ResGene_Dict[info] = {}                                                     # Last entry push
     ResGene_Dict[info][data]= {}
     for i in f_kmer_generator(data, 19):
         ResGene_Dict[info][data][i]=0
-    print("f_ResGeneDict_Kmers: complete!")
+    print("f_ResGeneDict_Kmers of %s is complete!" % infile) 
     return ResGene_Dict
 
+def f_Kmer_depth(Reads_list,min_depth):
+    """ Create all kmers from reads and subselect 
+    for the depth(aka number of occurance"""
+    print("Curent function f_Kmer_depth")
+    test_counter=0    
+    Kmer_Dict = dict()
+    for read in Reads_list:
+        test_counter +=1
+        kmer_list = f_kmer_generator(read,19)
+        for kmer in kmer_list:
+            if kmer in Kmer_Dict:                                               # Kmer count
+                Kmer_Dict[kmer] += 1
+            else:
+                Kmer_Dict[kmer] = 1
+        if test_counter%100000 ==0:                                             # Counter
+            print("f_Kmer_depth, counter state: ", test_counter )
+            
+def f_Kmer_depth_rev_com(Reads_list,min_depth):
+    """ Create all kmers from reads and subselect 
+    for the depth(aka number of occurance"""
+    print("Curent function f_Kmer_depth")
+    test_counter=0    
+    Kmer_Dict = dict()
+    for read in Reads_list:
+        test_counter +=1
+        
+        kmer_list = f_kmer_generator(read,19)
+        rev_read = reverse_complement(read)                                       # Reverse complement the sequence 
+        rev_kmer_list = f_kmer_generator(rev_read,19)
+        kmer_list.extend(rev_kmer_list)
+        for kmer in kmer_list:
+            if kmer in Kmer_Dict:
+                Kmer_Dict[kmer] += 1
+            else:
+                Kmer_Dict[kmer] = 1
+        if test_counter%100000 ==0:
+            print("f_Kmer_depth, counter state: ", test_counter ) 
+    Reads_subset = {key:val for key, val in Kmer_Dict.items() if val > min_depth} # Create a subset based on depth specifications
+    print("Done") 
+    return Reads_subset, Kmer_Dict # this can be removed if we choose to subselect (will free up the memory )
+ ### currently with these files it is .... 123 445 562 kmers in total, subset is 11 138 671 (x100 less if cut to min depth 10)
+    
+
 def f_kmer_generator(sequence, kmer_length):
-    '''k-mer generator using list'''
+    """k-mer generator using list"""
     kmer_list = list()
-    for i in range(0, len(sequence), 1):
-        if (i < len(sequence)-kmer_length+1):
-            kmer_list.append(sequence[i:i+kmer_length])
+    for i in range(0, len(sequence)-kmer_length+1):
+        kmer_list.append(sequence[i:i+kmer_length])
     return(kmer_list)
     
+def reverse_complement(DNA_sequence):
+    """Reverse complement a given DNA sequence"""
+    DNA_translation_table = str.maketrans("ACGT", "TGCA")
+    rev_compliment = DNA_sequence.translate(DNA_translation_table)
+    return rev_compliment[::-1]    
+
+
     
-def f_Dict_crosscheck(newRes_Dict, Reads_subset):
+def f_Dict_crosscheck2(newRes_Dict, Reads_subset):
     ### So here i can quickly check for the presence of the kmers in both dics
     ### If we construct a loop to go over each kmer for reference gene in turn and if complete
     ### create a file with the gene ID , coverage depth value ( which is set for the subselection)
@@ -99,24 +115,34 @@ def f_Dict_crosscheck(newRes_Dict, Reads_subset):
     """ Cross check reads and resistance genes dictionaries, 
     check if the kmers are present in both and assign the count from 
     the reads dictionary"""
+    results = []
     try: 
-        counter = 0
-        inner = 0
-        results = set()
-        for key1 in newRes_Dict:    
-            for key2 in newRes_Dict[key1]:
-                for key3 in newRes_Dict[key1][key2]: # the inner key aka kmers
-                    counter +=1
+        gene_counter = 0
+        #inner = 0
+        
+
+        for key1 in newRes_Dict:                                                 # for ID
+            gene_counter +=1
+            for key2 in newRes_Dict[key1]:                                       # for Sequence
+                kmer_count = 0                                                   # how many kmers has been matched
+                seq_len = len(key2)-18                                           # how many kmers per gene (Seq_len - kmer_size_len+1 (0-indexing))
+                min_depth = None
+                for key3 in newRes_Dict[key1][key2]:                             # the inner key aka kmers
+                    #inner += 1
                     if key3 in Reads_subset:
-                        results.add(key1)
-                        inner += 1
+                        kmer_count +=1                                           # if kmer matched +=1
                         newRes_Dict[key1][key2][key3]=Reads_subset[key3]
-                    if inner % 100 == 0:
-                        print("Inner count: ", inner)
-                    if counter % 10 == 0:
-                        print("Outer count: ",counter)
-    except TypeError:
+                        if min_depth is None or Reads_subset[key3] < min_depth:
+                            min_depth = Reads_subset[key3]
+                gene_coverage = int(kmer_count*100/seq_len)  
+                if gene_coverage >=95:
+                    print("%s : \nCoverage of %s %% and minimum depth of %s\n" % (key1,gene_coverage, min_depth))
+                    results.append((key1,gene_coverage, min_depth))
+            if gene_counter % 100 == 0:
+                print("Number of genes processed: ",gene_counter)
+    except TypeError as e:
+        print(e)        
         print(key1, key2, key3,)
-        #print(newRes_Dict[key1][key2], newRes_Dict[key1][key2][key3])   
-  
+
     return results  
+
