@@ -146,3 +146,35 @@ def f_Dict_crosscheck2(newRes_Dict, Reads_subset):
 
     return results  
 
+
+#FUNCTION CALLS :
+#from functions2 import *
+
+### my files  - VLad
+infile_read1 = "file1.txt.gz"         #  illumina reads - file 1
+infile_read2 = "file2.txt.gz"         #  illumina reads - file 2
+infile_res = "resistance_genes.fsa"   #  referense genes
+   
+
+# Read the sample file
+Reads_list1 = f_gzip_extract_reads(infile_read1)
+Reads_list2 = f_gzip_extract_reads(infile_read2)
+Reads_list1.extend(Reads_list2)       # merge them together
+Reads_list2.clear()                   # remove the extra list
+
+# Read the resistance reference genes
+Res_Dict = f_ResGeneDict_Kmers(infile_res)
+
+# Create all kemers ( only forward are considered) and subset them for a depth
+Reads_subset, Reads_all = f_Kmer_depth_rev_com(Reads_list1,10)
+
+# Cross checks both dictionaries for the presense of the KMERS in both
+# atm outputs a separate list of ID's which gene kmers were found at least once
+
+results = f_Dict_crosscheck2(Res_Dict, Reads_subset) # if you want to use already filtered data to the set depth
+
+results_all = f_Dict_crosscheck2(Res_Dict, Reads_all) # or use all the data
+ 
+
+
+
