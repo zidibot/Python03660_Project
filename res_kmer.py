@@ -16,9 +16,7 @@ if len(sys.argv) == 1: # no command line argument
         print("Can't open file, reason:", str(error))
         sys.exit(1)
     Reads1_path = str(input("Path to FASTQ (*.gz) read 1 file: ")) # Unknown3_raw_reads_1.txt.gz
-    Reads1_path_split = Reads1_path.rsplit("_", 1)
-    Reads2_path = Reads1_path_split[0] + "_" + Reads1_path_split[1].translate(str.maketrans("1", "2"))
-    print("Automatically determined path to FASTQ (*.gz) read 2 file:", Reads2_path)
+    Reads2_path = str(input("Path to FASTQ (*.gz) read 2 file: ")) # Unknown3_raw_reads_2.txt.gz
     try:
         Reads1File = gzip.open(Reads1_path, "rt")
         Reads2File = gzip.open(Reads2_path, "rt")
