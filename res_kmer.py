@@ -105,7 +105,6 @@ store_fasta_seqs = [] # List of header and sequence of resistance file
 ResKmerSet  = set()   # Resistance genes kmer set
 ResKmerDict = dict()  # Unique resistance genes kmer dictionary {kmer1:0, kmer2:0, ...}
 
-ResFile = open("data/resistance_genes.fsa", "r")
 for line in ResFile:
     line = line.rstrip()
     if line.startswith(">"):
