@@ -166,6 +166,12 @@ counter = 0
 sequence = ""
 final_result = list()
 
+# plots
+from matplotlib import pyplot as plt
+import numpy as np
+plot_count = 1
+# end plots
+
 for i in range(len(store_fasta_seqs)):
     if (counter % 2 == 0):
         # arrived at gene id
@@ -193,6 +199,17 @@ for i in range(len(store_fasta_seqs)):
         # Once we processed every kmer of the sequence and the coverage
         # is still >95%, we check for minimum depth (>=10)
         if skip_sequence and (min(temp) >= 10):
+            # plots
+            x = np.linspace(0, len(temp), len(temp))
+            plt.plot(x, temp, "-b")
+            plt.ylim(0, max(temp))
+            plt.ylabel("depth")
+            plt.xlabel("gene position")
+            plt.title(header)
+            plt.savefig(fname="depth_coverage_" + str(plot_count) + ".svg", format="svg", dpi=300)
+            plt.clf()
+            plot_count += 1
+            # end plots
             final_result.append([header, temp_coverage, min(temp)])
     counter += 1
 
