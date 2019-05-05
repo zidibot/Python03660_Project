@@ -77,7 +77,7 @@ def read_in_seq_reads(read, kmer_length):
             read_kmer_set.add(read_seq[41:41+kmer_length])
             read_kmer_set.add(read_seq[81:81+kmer_length])
 
-            if len(read_kmer_set.intersection(ResKmerSet)) >= 2:
+            if len(read_kmer_set.intersection(ResKmerSet)) > 1:
                 for j in range(0, len(read_seq), 1):
                     if (j < len(read_seq) - kmer_length + 1):
                         read_kmer = read_seq[j:j+kmer_length]
@@ -91,7 +91,7 @@ def read_in_seq_reads(read, kmer_length):
                 read_kmer_set.add(rev_read_seq[41:41+kmer_length])
                 read_kmer_set.add(rev_read_seq[81:81+kmer_length])
 
-                if len(read_kmer_set.intersection(ResKmerSet)) >= 2:
+                if len(read_kmer_set.intersection(ResKmerSet)) > 1:
                     for j in range(0, len(rev_read_seq), 1):
                         if (j < len(rev_read_seq) - kmer_length + 1):
                             read_kmer = rev_read_seq[j:j+kmer_length]
@@ -117,11 +117,11 @@ for line in ResFile:
             # add them to a kmer set, and
             # add them to a kmer dictionary with value 0
             for i in range(0, len(full_seq), 1):
-                kmer = full_seq[i:i+kmer_length]
                 if (i < len(full_seq) - kmer_length + 1):
+                    kmer = full_seq[i:i+kmer_length]
                     ResKmerSet.add(kmer)
-                if kmer not in ResKmerDict.keys():
-                    ResKmerDict[kmer] = 0
+                    if kmer not in ResKmerDict.keys():
+                        ResKmerDict[kmer] = 0
             fasta = []
         header = line
     else:
@@ -138,11 +138,11 @@ if fasta:
     # add them to a kmer set, and
     # add them to a kmer dictionary with value 0
     for i in range(0, len(full_seq), 1):
-        kmer = full_seq[i:i+kmer_length]
         if (i < len(full_seq) - kmer_length + 1):
+            kmer = full_seq[i:i+kmer_length]
             ResKmerSet.add(kmer)
-        if kmer not in ResKmerDict.keys():
-            ResKmerDict[kmer] = 0
+            if kmer not in ResKmerDict.keys():
+                ResKmerDict[kmer] = 0
 
 ResFile.close()
 
