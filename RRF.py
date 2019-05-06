@@ -1,6 +1,6 @@
 # Libraries
 import sys
-import gzip # Provides support for *.gzip files
+import gzip # Provides support for *.gz (compressed) files
 import time # Used for runtime measurement
 time_start = time.time() # start timer
 
@@ -148,6 +148,12 @@ def filter_res_genes(store_fasta_seqs):
     counter = 0
     sequence = ""
 
+    ### plots
+    import matplotlib.pyplot as plt
+    import numpy as np
+    plt_counter = 1
+    ### end plots
+
     for i in range(len(store_fasta_seqs)):
         if (counter % 2 == 0):
             # arrived at gene id
@@ -170,9 +176,23 @@ def filter_res_genes(store_fasta_seqs):
                 if (temp_depth):
                     depth_of_kmer = ResKmerDict[read_kmer]
                     temp.append(depth_of_kmer)
-                        #temp_coverage = 1 - temp.count(0) / len_of_sequence
+                    #temp_coverage = 1 - temp.count(0) / len_of_sequence
+                    print(header)
+                    print(len(temp) / (len(sequence) - kmer_length + 1))
             gene_coverage = len(temp) / (len(sequence) - kmer_length + 1)
             if (gene_coverage >= 0.95): # check coverage, stop once below 95%
+                # start plots
+                #x = np.linspace(0, len(temp), len(temp))
+                #plt.plot(x, temp, "-b")
+                #plt.ylim(0, max(temp))
+                #plt.title(header)
+                #plt.ylabel("depth")
+                #plt.xlabel("gene position")
+                #plt.savefig(fname="depth_coverage_" + str(plt_counter) + ".png", format="png", dpi=300)
+                #plt.clf()
+                #plt_counter += 1
+                # end plots
+
                 # Once we processed every kmer of the sequence and the coverage
                 # is still >95%, we check for minimum depth (>=10)
                 final_result.append([header, gene_coverage, min(temp)])
