@@ -148,12 +148,6 @@ def filter_res_genes(store_fasta_seqs):
     counter = 0
     sequence = ""
 
-    ### plots
-    import matplotlib.pyplot as plt
-    import numpy as np
-    plt_counter = 1
-    ### end plots
-
     for i in range(len(store_fasta_seqs)):
         if (counter % 2 == 0):
             # arrived at gene id
@@ -166,9 +160,7 @@ def filter_res_genes(store_fasta_seqs):
             len_of_sequence = len(sequence)
 
             # Generate kmers of the sequence.
-            # Add the depth to a kmer depth list, and check for coverage.
-            # As soon as the coverage drops below 95%, ignore the sequence.
-            # (= does not fulfill the requirements).
+            # Add the depth to a kmer depth list if depth >=10
             for j in range(0, len(sequence) - kmer_length + 1, 1):
                 read_kmer = sequence[j:j+kmer_length]
                 temp_depth = ResKmerDict[read_kmer] >= 10
@@ -176,25 +168,10 @@ def filter_res_genes(store_fasta_seqs):
                 if (temp_depth):
                     depth_of_kmer = ResKmerDict[read_kmer]
                     temp.append(depth_of_kmer)
-                    #temp_coverage = 1 - temp.count(0) / len_of_sequence
-                    print(header)
-                    print(len(temp) / (len(sequence) - kmer_length + 1))
             gene_coverage = len(temp) / (len(sequence) - kmer_length + 1)
-            if (gene_coverage >= 0.95): # check coverage, stop once below 95%
-                # start plots
-                #x = np.linspace(0, len(temp), len(temp))
-                #plt.plot(x, temp, "-b")
-                #plt.ylim(0, max(temp))
-                #plt.title(header)
-                #plt.ylabel("depth")
-                #plt.xlabel("gene position")
-                #plt.savefig(fname="depth_coverage_" + str(plt_counter) + ".png", format="png", dpi=300)
-                #plt.clf()
-                #plt_counter += 1
-                # end plots
-
+            if (gene_coverage >= 0.95): # check if coverage is equal or greater 95%
                 # Once we processed every kmer of the sequence and the coverage
-                # is still >95%, we check for minimum depth (>=10)
+                # is still >=95%, we store the results in our final list.
                 final_result.append([header, gene_coverage, min(temp)])
         counter += 1
 
