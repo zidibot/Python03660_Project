@@ -4,9 +4,10 @@ import gzip # Provides support for *.gzip files
 import time # Used for runtime measurement
 time_start = time.time() # start timer
 
-print("\nProgram: Tool for identifying which resistance genes are in the sample.")
+print("\nProgram: [R]apid [R]esistance [F]inder")
+print("Tool for identifying which resistance genes are in the sample.")
 print("Version: 1.0")
-print("\nUsage: res_kmer.py <FASTA_resistance_genes> <FASTQ_read_file1.gz> <FASTQ_read_file2.gz> <length_of_kmer>\n")
+print("\nUsage: RRF.py <FASTA_resistance_genes> <FASTQ_read_file1.gz> <FASTQ_read_file2.gz> <length_of_kmer>\n")
 
 if len(sys.argv) == 1: # no command line argument
     print("No command line arguments.")
@@ -24,7 +25,7 @@ if len(sys.argv) == 1: # no command line argument
         print("Can't open file, reason:", str(error))
         sys.exit(1)
     try:
-        kmer_length = int(input("kmer length as integer (the lower the slower, recommended is 19): "))
+        kmer_length = int(input("kmer length as integer (recommended is 19): "))
     except ValueError as error:
         sys.stderr.write("Kmer is not an integer. Exiting.")
         sys.exit(1)
@@ -42,7 +43,7 @@ elif len(sys.argv) == 5: # user provided all command line arguments
         sys.stderr.write("Kmer is not an integer. Exiting.")
         sys.exit(1)
 else:
-    sys.stderr.write("Usage: res_kmer.py <FASTA_resistance_genes> <FASTQ_read_file1.gz> <FASTQ_read_file2.gz> <length_of_kmer>\n")
+    sys.stderr.write("Usage: RRF.py <FASTA_resistance_genes> <FASTQ_read_file1.gz> <FASTQ_read_file2.gz> <length_of_kmer>\n")
     sys.exit(1)
 
 # Functions
@@ -181,16 +182,18 @@ for i in range(len(store_fasta_seqs)):
         for j in range(0, len(sequence), 1):
             if (j < len(sequence) - kmer_length + 1):
                 read_kmer = sequence[j:j+kmer_length]
-                depth_of_kmer = ResKmerDict[read_kmer]
-                temp.append(depth_of_kmer)
-                temp_coverage = 1 - temp.count(0) / len_of_sequence
-                if (temp_coverage < 0.95): # check coverage, stop once below 95%
-                    skip_sequence = False
-                    break
-        # Once we processed every kmer of the sequence and the coverage
-        # is still >95%, we check for minimum depth (>=10)
-        if skip_sequence and (min(temp) >= 10):
-            final_result.append([header, temp_coverage, min(temp)])
+                temp_depth = ResKmerDict[read_kmer] >= 10
+
+                if (temp_depth):
+                    depth_of_kmer = ResKmerDict[read_kmer]
+                    temp.append(depth_of_kmer)
+                    #temp_coverage = 1 - temp.count(0) / len_of_sequence
+            #print(header, (len(temp)))
+        gene_coverage = len(temp) / (len(sequence) - kmer_length + 1)
+        if (gene_coverage >= 0.95): # check coverage, stop once below 95%
+                # Once we processed every kmer of the sequence and the coverage
+                # is still >95%, we check for minimum depth (>=10)
+            final_result.append([header, gene_coverage, min(temp)])
     counter += 1
 
 # Sort results according to coverage and then minimum depth. Print results.
@@ -200,5 +203,6 @@ for i in range(len(final_result)):
     print("{:.2f}\t\t{:d}\t\t{}".format(final_result[i][1] * 100, final_result[i][2], final_result[i][0]))
 
 time_end = time.time()
-time_elapsed = time_end - time_start
-time_elapsed
+time_elapsed = (time_end - time_start) / 60
+# Time in minutes
+print(time_elapsed)
