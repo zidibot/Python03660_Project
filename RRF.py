@@ -207,4 +207,4 @@ for i in range(len(final_result)):
 
 time_end = time.time()
 time_elapsed = (time_end - time_start) / 60
-print("Elapsed time in minutues: {:.2f}".format(time_elapsed))
+print("Elapsed time in minutes: {:.2f}".format(time_elapsed))
