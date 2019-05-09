@@ -13,10 +13,11 @@ print("\nUsage: RRF.py <FASTA_resistance_genes> <FASTQ_read_file1.gz> <FASTQ_rea
 if len(sys.argv) == 1: # no command line argument
     print("No command line arguments.")
     try:
-        ResFile = open(str(input("Path to FASTA resistance gene file: ")), "r")
+        ResFile = open(str(input("Path to FASTA resistance gene file: ")), "r") # resistance_genes.fsa
     except IOError as error:
         print("Can't open file, reason:", str(error))
         sys.exit(1)
+
     Reads1_path = str(input("Path to FASTQ (*.gz) read 1 file: ")) # Unknown3_raw_reads_1.txt.gz
     Reads2_path = str(input("Path to FASTQ (*.gz) read 2 file: ")) # Unknown3_raw_reads_2.txt.gz
     try:
@@ -25,6 +26,7 @@ if len(sys.argv) == 1: # no command line argument
     except IOError as error:
         print("Can't open file, reason:", str(error))
         sys.exit(1)
+
     try:
         kmer_length = int(input("kmer length as integer (recommended is 19): "))
     except ValueError as error:
@@ -38,6 +40,7 @@ elif len(sys.argv) == 5: # user provided all command line arguments
     except IOError as error:
         print("Can't open file, reason:", str(error))
         sys.exit(1)
+
     try:
         kmer_length = int(sys.argv[4])
     except ValueError as error:
@@ -58,9 +61,9 @@ def process_res_gene_file(ResFile):
         line = line.rstrip()
         if line.startswith(">"):
             if fasta:
-                full_seq = "".join(fasta) # Store entire resistance gene sequence
-                store_fasta_seqs.append(header)
-                store_fasta_seqs.append(full_seq)
+                full_seq = "".join(fasta)         # Store entire resistance gene sequence
+                store_fasta_seqs.append(header)   # Store header in list
+                store_fasta_seqs.append(full_seq) # Store sequence in list
 
                 # Generate kmers of the resistance gene,
                 # add them to a kmer set, and
@@ -70,6 +73,7 @@ def process_res_gene_file(ResFile):
                     ResKmerSet.add(kmer)
                     if kmer not in ResKmerDict.keys():
                         ResKmerDict[kmer] = 0
+
                 fasta = []
             header = line
         else:
@@ -78,9 +82,9 @@ def process_res_gene_file(ResFile):
 
     # Process last resistance gene
     if fasta:
-        full_seq = "".join(fasta) # Store entire resistance gene sequence
-        store_fasta_seqs.append(header)
-        store_fasta_seqs.append(full_seq)
+        full_seq = "".join(fasta)         # Store entire resistance gene sequence
+        store_fasta_seqs.append(header)   # Store header in list
+        store_fasta_seqs.append(full_seq) # Store sequence in list
 
         # Generate kmers of the resistance gene,
         # add them to a kmer set, and
@@ -102,13 +106,13 @@ def reverse_complement(DNA_sequence):
 def read_in_seq_reads(read, kmer_length):
     """Go through sequencing reads and check if at least 2 out of 3 kmer match
     the resistance gene kmer set. If so, generate all kmers for that read and
-    increase the count for matching kmers. Also consider the reverse complement."""
+    increase the count for matching kmers. Otherwise consider the reverse complement."""
 
     # Variables
-    read_seq = ""
+    read_seq     = ""
     rev_read_seq = ""
-    read_kmer = ""
-    line_count = 3
+    read_kmer    = ""
+    line_count   = 3
 
     for read_line in read:
         if (line_count % 4 == 0):
@@ -117,8 +121,8 @@ def read_in_seq_reads(read, kmer_length):
             # Generate 3 read kmers and check if at least 2 match to the
             # resistance gene dictionary. If so, generate all kmers for
             # that read, otherwise try the reverse complement. If the
-            # reverse complement does not have at least 2 matches, ignore
-            # this read.
+            # reverse complement does not have at least 2 matches either,
+            # ignore this read.
             read_kmer_set = set()
             read_kmer_set.add(read_seq[1:1+kmer_length])
             read_kmer_set.add(read_seq[41:41+kmer_length])
@@ -145,7 +149,12 @@ def read_in_seq_reads(read, kmer_length):
         line_count += 1
 
 def filter_res_genes(store_fasta_seqs):
-    counter = 0
+    """Iterate over the header + res sequence list and generate kmers for the
+    sequence. If kmer has depth >= 10, store it in temporary list. Once all
+    kmer has been processed for the sequence, determine if coverage >= 95%.
+    If true, store results in a final list, which in the end becomes sorted
+    by coverage and depth."""
+    counter  = 0
     sequence = ""
 
     for i in range(len(store_fasta_seqs)):
@@ -168,20 +177,22 @@ def filter_res_genes(store_fasta_seqs):
                 if (temp_depth):
                     depth_of_kmer = ResKmerDict[read_kmer]
                     temp.append(depth_of_kmer)
+
             gene_coverage = len(temp) / (len(sequence) - kmer_length + 1)
             if (gene_coverage >= 0.95): # check if coverage is equal or greater 95%
                 # Once we processed every kmer of the sequence and the coverage
                 # is still >=95%, we store the results in our final list.
                 final_result.append([header, gene_coverage, min(temp)])
+
         counter += 1
 
     # Sort results according to coverage and then minimum depth. Print results.
     final_result.sort(key=lambda x: (x[1], x[2]), reverse=True)
 
 print("Processing resistance genes...")
-store_fasta_seqs = [] # List of header and sequence of resistance file
-ResKmerSet  = set()   # Resistance genes kmer set
-ResKmerDict = dict()  # Unique resistance genes kmer dictionary {kmer1:0, kmer2:0, ...}
+store_fasta_seqs = []     # List of header and sequence of resistance file
+ResKmerSet       = set()  # Resistance genes kmer set
+ResKmerDict      = dict() # Unique resistance genes kmer dictionary {kmer1:0, kmer2:0, ...}
 process_res_gene_file(ResFile)
 print("Finished processing resistance gene file.")
 
@@ -193,12 +204,12 @@ print("Processing read file 2...")
 read_in_seq_reads(Reads2File, kmer_length)
 Reads2File.close()
 
-print("Filtering resistance genes that do not match the requirements (>=95% coverage, >=10 depth)...")
+print("Filtering resistance genes that fulfill the requirements (coverage >=95%, depth >=10)...")
 final_result = list()
 filter_res_genes(store_fasta_seqs)
 
 # Print resistance genes that passed coverage and depth criteria
-print("Coverage [%]\tMinimum depth\tGene")
+print("Coverage [%]\tMinimum depth\tGene name")
 for i in range(len(final_result)):
     print("{:.2f}\t\t{:d}\t\t{}".format(final_result[i][1] * 100, final_result[i][2], final_result[i][0]))
 
